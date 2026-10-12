@@ -1,86 +1,204 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_options.dart';
 
-class FormPage extends StatefulWidget {
-  const FormPage({super.key});
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-  @override
-  State<FormPage> createState() => _FormPageState();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  runApp(const MyApp());
 }
 
-class _FormPageState extends State<FormPage> {
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController ageController = TextEditingController();
-  final TextEditingController birthdayController = TextEditingController();
-  final TextEditingController genderController = TextEditingController();
-  final TextEditingController civilStatusController = TextEditingController();
-  final TextEditingController addressController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController courseController = TextEditingController();
-  final TextEditingController sectionController = TextEditingController();
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
-  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Subject Enrollment',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const RegistrationPage(),
+    );
+  }
+}
 
-  Future<void> saveData() async {
+class RegistrationPage extends StatefulWidget {
+  const RegistrationPage({super.key});
+
+  @override
+  State<RegistrationPage> createState() => _RegistrationPageState();
+}
+
+class _RegistrationPageState extends State<RegistrationPage> {
+  final nameController = TextEditingController();
+  final sectionController = TextEditingController();
+  final courseController = TextEditingController();
+
+  void nextPage() {
     if (nameController.text.trim().isEmpty ||
-        ageController.text.trim().isEmpty ||
-        birthdayController.text.trim().isEmpty ||
-        genderController.text.trim().isEmpty ||
-        civilStatusController.text.trim().isEmpty ||
-        addressController.text.trim().isEmpty ||
-        phoneController.text.trim().isEmpty ||
-        emailController.text.trim().isEmpty ||
-        courseController.text.trim().isEmpty ||
-        sectionController.text.trim().isEmpty) {
+        sectionController.text.trim().isEmpty ||
+        courseController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
       );
       return;
     }
 
-    await firestore.collection('students').add({
-      'name': nameController.text.trim(),
-      'age': ageController.text.trim(),
-      'birthday': birthdayController.text.trim(),
-      'gender': genderController.text.trim(),
-      'civilStatus': civilStatusController.text.trim(),
-      'address': addressController.text.trim(),
-      'phone': phoneController.text.trim(),
-      'email': emailController.text.trim(),
-      'course': courseController.text.trim(),
-      'section': sectionController.text.trim(),
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-
-    ScaffoldMessenger.of(
+    Navigator.push(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Data saved successfully')));
-
-    nameController.clear();
-    ageController.clear();
-    birthdayController.clear();
-    genderController.clear();
-    civilStatusController.clear();
-    addressController.clear();
-    phoneController.clear();
-    emailController.clear();
-    courseController.clear();
-    sectionController.clear();
+      MaterialPageRoute(
+        builder: (context) => SubjectEnrollmentPage(
+          name: nameController.text.trim(),
+          section: sectionController.text.trim(),
+          course: courseController.text.trim(),
+        ),
+      ),
+    );
   }
 
   @override
   void dispose() {
     nameController.dispose();
-    ageController.dispose();
-    birthdayController.dispose();
-    genderController.dispose();
-    civilStatusController.dispose();
-    addressController.dispose();
-    phoneController.dispose();
-    emailController.dispose();
-    courseController.dispose();
     sectionController.dispose();
+    courseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('User Registration'), centerTitle: true),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const Text(
+              'Student Information',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person),
+              ),
+            ),
+            const SizedBox(height: 15),
+
+            TextField(
+              controller: sectionController,
+              decoration: const InputDecoration(
+                labelText: 'Section',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.class_),
+              ),
+            ),
+            const SizedBox(height: 15),
+
+            TextField(
+              controller: courseController,
+              decoration: const InputDecoration(
+                labelText: 'Course',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.school),
+              ),
+            ),
+            const SizedBox(height: 25),
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: nextPage,
+                child: const Text('Next'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SubjectEnrollmentPage extends StatefulWidget {
+  final String name;
+  final String section;
+  final String course;
+
+  const SubjectEnrollmentPage({
+    super.key,
+    required this.name,
+    required this.section,
+    required this.course,
+  });
+
+  @override
+  State<SubjectEnrollmentPage> createState() => _SubjectEnrollmentPageState();
+}
+
+class _SubjectEnrollmentPageState extends State<SubjectEnrollmentPage> {
+  final subject1Controller = TextEditingController();
+  final subject2Controller = TextEditingController();
+
+  TimeOfDay? time1;
+  TimeOfDay? time2;
+
+  Future<void> selectTime(int subjectNumber) async {
+    final selectedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+
+    if (selectedTime != null && mounted) {
+      setState(() {
+        if (subjectNumber == 1) {
+          time1 = selectedTime;
+        } else {
+          time2 = selectedTime;
+        }
+      });
+    }
+  }
+
+  void nextPage() {
+    if (subject1Controller.text.trim().isEmpty ||
+        subject2Controller.text.trim().isEmpty ||
+        time1 == null ||
+        time2 == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter both subjects and their times'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SubjectVerificationPage(
+          name: widget.name,
+          section: widget.section,
+          course: widget.course,
+          subject1: subject1Controller.text.trim(),
+          time1: time1!.format(context),
+          subject2: subject2Controller.text.trim(),
+          time2: time2!.format(context),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    subject1Controller.dispose();
+    subject2Controller.dispose();
     super.dispose();
   }
 
@@ -88,156 +206,68 @@ class _FormPageState extends State<FormPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        title: const Text('Subject Enrollment'),
         centerTitle: true,
-        title: const Text(
-          'Biodata Form',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Center(
-              child: Text(
-                'Personal Information',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
+            const Text(
+              'First Subject',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
 
             TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                labelText: 'Name',
-                prefixIcon: const Icon(Icons.person),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+              controller: subject1Controller,
+              decoration: const InputDecoration(
+                labelText: 'Subject Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => selectTime(1),
+                icon: const Icon(Icons.access_time),
+                label: Text(
+                  time1 == null
+                      ? 'Select First Subject Time'
+                      : 'Time: ${time1!.format(context)}',
                 ),
               ),
             ),
 
+            const SizedBox(height: 25),
+
+            const Text(
+              'Second Subject',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
 
             TextField(
-              controller: ageController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Age',
-                prefixIcon: const Icon(Icons.cake),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+              controller: subject2Controller,
+              decoration: const InputDecoration(
+                labelText: 'Subject Name',
+                border: OutlineInputBorder(),
               ),
             ),
-
             const SizedBox(height: 12),
 
-            TextField(
-              controller: birthdayController,
-              decoration: InputDecoration(
-                labelText: 'Birthday',
-                prefixIcon: const Icon(Icons.calendar_today),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            TextField(
-              controller: genderController,
-              decoration: InputDecoration(
-                labelText: 'Gender',
-                prefixIcon: const Icon(Icons.person_outline),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            TextField(
-              controller: civilStatusController,
-              decoration: InputDecoration(
-                labelText: 'Civil Status',
-                prefixIcon: const Icon(Icons.favorite),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            TextField(
-              controller: addressController,
-              maxLines: 2,
-              decoration: InputDecoration(
-                labelText: 'Address',
-                prefixIcon: const Icon(Icons.home),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            TextField(
-              controller: phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: 'Phone Number',
-                prefixIcon: const Icon(Icons.phone),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            TextField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                labelText: 'Email',
-                prefixIcon: const Icon(Icons.email),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            TextField(
-              controller: courseController,
-              decoration: InputDecoration(
-                labelText: 'Course',
-                prefixIcon: const Icon(Icons.school),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            TextField(
-              controller: sectionController,
-              decoration: InputDecoration(
-                labelText: 'Section',
-                prefixIcon: const Icon(Icons.class_),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => selectTime(2),
+                icon: const Icon(Icons.access_time),
+                label: Text(
+                  time2 == null
+                      ? 'Select Second Subject Time'
+                      : 'Time: ${time2!.format(context)}',
                 ),
               ),
             ),
@@ -247,22 +277,160 @@ class _FormPageState extends State<FormPage> {
             SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton.icon(
-                onPressed: saveData,
-                icon: const Icon(Icons.save),
-                label: const Text(
-                  'Save to Firebase',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
+              child: ElevatedButton(
+                onPressed: nextPage,
+                child: const Text('Next'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SubjectVerificationPage extends StatefulWidget {
+  final String name;
+  final String section;
+  final String course;
+  final String subject1;
+  final String time1;
+  final String subject2;
+  final String time2;
+
+  const SubjectVerificationPage({
+    super.key,
+    required this.name,
+    required this.section,
+    required this.course,
+    required this.subject1,
+    required this.time1,
+    required this.subject2,
+    required this.time2,
+  });
+
+  @override
+  State<SubjectVerificationPage> createState() =>
+      _SubjectVerificationPageState();
+}
+
+class _SubjectVerificationPageState extends State<SubjectVerificationPage> {
+  bool isSaving = false;
+
+  Future<void> saveData() async {
+    if (isSaving) return;
+
+    setState(() {
+      isSaving = true;
+    });
+
+    try {
+      await FirebaseFirestore.instance.collection('enrollments').add({
+        'name': widget.name,
+        'section': widget.section,
+        'course': widget.course,
+        'subject1': widget.subject1,
+        'time1': widget.time1,
+        'subject2': widget.subject2,
+        'time2': widget.time2,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enrollment saved successfully!')),
+      );
+
+      Navigator.popUntil(context, (route) => route.isFirst);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save enrollment: $e')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          isSaving = false;
+        });
+      }
+    }
+  }
+
+  Widget detail(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(flex: 3, child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Subject Verification'),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Center(
+              child: Icon(Icons.fact_check, size: 60, color: Colors.blue),
+            ),
+            const SizedBox(height: 15),
+
+            const Center(
+              child: Text(
+                'Subject Verification',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
+            const Divider(),
+
+            detail('Name:', widget.name),
+            detail('Section:', widget.section),
+            detail('Course:', widget.course),
+
+            const Divider(),
+
+            detail('First Subject:', widget.subject1),
+            detail('First Subject Time:', widget.time1),
+
+            const Divider(),
+
+            detail('Second Subject:', widget.subject2),
+            detail('Second Subject Time:', widget.time2),
+
+            const SizedBox(height: 25),
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: isSaving ? null : saveData,
+                icon: const Icon(Icons.save),
+                label: Text(
+                  isSaving ? 'Please wait...Saving...' : 'Save to Firebase',
+                ),
+              ),
+            ),
           ],
         ),
       ),
